@@ -57,7 +57,11 @@ def getMostCommon(file, field):
     clientIP = []
     for value in values:
         # Get the client IP. The field value defines the field position to be used
-        clientIP.append(value[field])
+        try:
+            clientIP.append(value[field])
+        # The IndexError exception is catched for entries that do not have the field
+        except IndexError:
+            pass
     # Get the most common value in the list
     mostCommon = max(set(clientIP), key=clientIP.count)
     # Return the most common value
@@ -75,13 +79,21 @@ def getLeastCommon(file, field):
     clientIP = []
     for value in values:
         # Get the client IP. The field value defines the field position to be used
-        clientIP.append(value[field])
+        try:
+            clientIP.append(value[field])
+        except IndexError:
+            pass
     # Get the least common value in the list
     leastCommon = min(set(clientIP), key=clientIP.count)
     # Return the least common value
     return leastCommon
 
-# Function to group the time stamps that are in the same second and count the events of those time stamps
+'''
+
+Function to group the timestamps that are in the same second and count the events of those timestamps.
+It is assumed that each timestamp is an event. The function returns the number of events in each second.
+
+'''
 def eventsPerSecond(file, field):
     lines = readCSV(file)
     values = []
@@ -91,14 +103,43 @@ def eventsPerSecond(file, field):
     timeStamps = []
     for value in values:
         # The time stamp from the first field is obtained and stored
-        timeStamps.append(value[field])
+        try:
+            timeStamps.append(value[field])
+        except IndexError:
+            pass
     # Iteration to go trough the timestamps and order the ones in the same second
     iterator = itertools.groupby(timeStamps, lambda string: string.split('.')[0])
     result = []
+    events = []
+    # The timestamps that are in the same second are stored in a new list
     for element, group in iterator:
-        result.append(len(list(group)))
         result.append(list(group))
-    return result
+    # A new list is made with the number of events in each timestamp/second
+    for item in result:
+        # The number of events in each second is obtained
+        events.append(len(item))
+    return events
+
+# Function that adds the response header size and the response size in bytes of all the entries
+def totalBytesExchanged(file, field, field1):
+    # Get the list of lines in the csv file
+    lines = readCSV(file)
+    # Get the list of values inside each entry of the csv
+    values = []
+    for line in lines:
+        value = line.split()
+        values.append(value)
+    responseSize = []
+    for value in values:
+        # Sum of header and response
+        try:
+            add = int(value[field]) + int(value[field1])
+            responseSize.append(add)
+        except IndexError:
+            pass
+    # The added value of each entry is added to the total
+    listSum = sum(responseSize)
+    return listSum
 
 # Function to interact with the user and pick the preferred option
 def let_user_pick(options):
@@ -111,7 +152,6 @@ def let_user_pick(options):
     try:
         if 0 <= int(i) <= len(options):
             return dynamicList[int(i)]
-            #return int(i)
     except:
         pass
     return None
@@ -124,7 +164,17 @@ pathToAnalyze = getPath()
 Using the following list, new options can be added extending the capabilites of the log analyzer CLI tool.
 
 '''
-options = ["Most frequent IP", "Least frequent IP", "Events per second", "Total amount of bytes exchanged", "Exit the program"]
+options = ["Most frequent IP", "Least frequent IP", "Events per second", "Total amount of bytes exchanged", "Exit the program and do the operations"]
+# A results list is used to know which operations were choosen and need to be performed
+results = [0] * 4
+# The values dumped to the output json are initialized to a default value
+mostCommon = leastCommon = events = totalBytes = "-"
+
+'''
+
+The "while" loop is used to keep the program running until the user decides to exit the program. The "choosenOption" variable keeps track of the option chosen by the user.
+
+'''
 while True:
     choosenOption = let_user_pick(options)
     '''
@@ -138,40 +188,47 @@ while True:
         except:
             print("That option was already used. Please, select another option.")
             continue
-        for item in pathToAnalyze:
-            #print("The most frequent IP is: {}".format(getMostCommon(item)))
-            # Int value "2" is used to refer to the field position of the client IP based on sample input file.
-            dictionary = {"file": item, "most frequent IP": getMostCommon(item, 2)}
-            with open(item+"-output.json", "a") as outfile:
-                json.dump(dictionary, outfile)
+        # The initial position of "results" is changed to 1 to indicate that the "Most frequent IP" operation needs to be done
+        results[0] = 1
     elif choosenOption == "Least frequent IP":
         try:
             options.remove("Least frequent IP")
         except:
             print("That option was already used. Please, select another option.")
             continue
-        for item in pathToAnalyze:
-            #print("The least frequent IP is: {}".format(getLeastCommon(item)))
-            # Int value "2" is used to refer to the field position of the client IP based on sample input file.
-            dictionary = {"file": item, "least frequent IP": getLeastCommon(item, 2)}
-            with open(item+"-output.json", "a") as outfile:
-                json.dump(dictionary, outfile)
+        results[1] = 1
     elif choosenOption == "Events per second":
         try:
             options.remove("Events per second")
         except:
             print("That option was already used. Please, select another option.")
             continue
-        for item in pathToAnalyze:
-            # Int value "0" is used to refer to the field position of the timestamp based on sample input file.
-            print(eventsPerSecond(item, 0))
+        results[2] = 1
     elif choosenOption == "Total amount of bytes exchanged":
         try:
             options.remove("Total amount of bytes exchanged")
         except:
             print("That option was already used. Please, select another option.")
             continue
-    elif choosenOption == "Exit the program":
+        results[3] = 1
+    elif choosenOption == "Exit the program and do the operations":
+        for item in pathToAnalyze:
+            if results[0] == 1:
+                # Int value "2" is used to refer to the field position of the client IP based on sample input file
+                mostCommon = getMostCommon(item, 2)
+            if results[1] == 1:
+                leastCommon = getLeastCommon(item, 2)
+            if results[2] == 1:
+                # Int value "0" is used to refer to the field position of the timestamp based on sample input file
+                events = eventsPerSecond(item, 0)
+            if results[3] == 1:
+                # The "totalBytesExchanged" function recieves as parameters the fields related to the response header size and the response size in bytes
+                totalBytes = totalBytesExchanged(item, 1, 4)           
+            # A dictionary is created and dumped to a new json file for every log file in the paths to analyze list
+            dictionary = {"file": item, "most frequent IP": mostCommon, "least frequent IP": leastCommon, "total bytes exchanged": totalBytes, "events per second": events}
+            with open(item+"-output.json", "w") as outfile:
+                json.dump(dictionary, outfile)
+            print("The ouput path for '{}' is: '{}-output.json'".format(item, item))
         break
     else:
         print("Not a valid option number.")

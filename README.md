@@ -53,7 +53,7 @@ Please, select an option:
 1) Least frequent IP
 2) Events per second
 3) Total amount of bytes exchanged
-4) Exit the program
+4) Exit the program and do the operations
 Enter number: 0
 ```
 3. We can choose another option. The previously selected option disappears:
@@ -63,7 +63,7 @@ $ Please, select an option:
 0) Least frequent IP
 1) Events per second
 2) Total amount of bytes exchanged
-3) Exit the program
+3) Exit the program and do the operations
 Enter number:
 ```
 
@@ -74,9 +74,15 @@ $ Please, select an option:
 0) Least frequent IP
 1) Events per second
 2) Total amount of bytes exchanged
-3) Exit the program
+3) Exit the program and do the operations
 Enter number: 3
-The output path for the file "/path/to/directory/with/logs/sample.log" is "/path/to/directory/with/logs/sample.log-output.json"
+The output path for '/path/to/directory/with/logs/sample.log' is: '/path/to/directory/with/logs/sample.log-output.json'
+```
+
+The output JSON file will have a structure similar to the following:
+
+```json
+{"file": "logs/testinglog2.log", "most frequent IP": "10.105.33.214", "least frequent IP": "10.105.37.17", "total bytes exchanged": 100837, "events per second": [1, 3, 2, 3, 5, 1, 3, 1, 1, 3, 2]}
 ```
 
 ## About the code
@@ -86,7 +92,7 @@ The output path for the file "/path/to/directory/with/logs/sample.log" is "/path
 The flexibility of the script allows the developer to add new options easily:
 
 ```python
-options = ["Most frequent IP", "Least frequent IP", "Events per second", "Total amount of bytes exchanged", "Exit the program"]
+options = ["Most frequent IP", "Least frequent IP", "Events per second", "Total amount of bytes exchanged", "Exit the program and do the operations"]
 ```
 
 ### How to adapt the code to work with other input log formats
@@ -107,11 +113,13 @@ def getMostCommon(file, field):
 ```
 
 ```python
-if choosenOption == "Most frequent IP":
+elif choosenOption == "Exit the program and do the operations":
     .....
-            # Int value "2" is used to refer to the field position of the client IP based on sample input file.
-            dictionary = {"file": item, "most frequent IP": getMostCommon(item, 2)}
+            if results[0] == 1:
+                # Int value "2" is used to refer to the field position of the client IP based on sample input file.
+                mostCommon = getMostCommon(item, 2)
     .....
+        break
 ```
 
 ## Contact
